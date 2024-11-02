@@ -1,0 +1,22 @@
+[project]
+name = "ao3"
+version = "0.1.0"
+description = "A lightweight and efficient scraper designed with BeautifulSoup4 and Aiohttp, providing programmatic access to www.archiveofourown.org."
+authors = [
+    {name = "BruDriguezz", email = "swiftnathyz@gmail.com"},
+]
+dependencies = [
+    "beautifulsoup4>=4.12.3",
+    "aiohttp>=3.10.10",
+]
+requires-python = ">=3.12"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.pdm]
+distribution = true
