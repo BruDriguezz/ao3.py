@@ -15,7 +15,7 @@ class Session(Generic[UserT]):
         self._session = ClientSession()
         self._session.headers.update(
             {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'    
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
             }
         )  # TODO: This will become a centralized requester API soon-ish.
 

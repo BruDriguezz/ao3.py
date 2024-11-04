@@ -25,4 +25,9 @@ distribution = true
 [tool.pdm.dev-dependencies]
 linting = [
     "ruff>=0.7.2",
+    "pre-commit>=4.0.1",
+    "pyright>=1.1.387",
 ]
+
+[tool.pdm.scripts]
+precommit = { shell = "pre-commit run --all-files" }
