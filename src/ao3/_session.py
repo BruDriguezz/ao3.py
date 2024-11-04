@@ -1,7 +1,6 @@
 from typing import Generic, TypeVar
 
-from asyncio import get_event_loop, run
-from aiohttp import ClientSession
+from requests import Session as ClientSession
 from bs4 import BeautifulSoup
 
 from ao3._parser import AO3Soup
@@ -13,20 +12,23 @@ class Session(Generic[UserT]):
     def __init__(
         self,
     ) -> None:
-        self._session = ClientSession(
-            base_url="https://archiveofourown.org/",
-            loop=get_event_loop(),
-            raise_for_status=True,
+        self._session = ClientSession()
+        self._session.headers.update(
+            {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'    
+            }
         )  # TODO: This will become a centralized requester API soon-ish.
 
-    async def _fetch_raw_data(
+    def _fetch_raw_data(
         self,
         target: str,
     ) -> str | None:
-        async with self._session.get(url=target) as result:
-            match result.status:
+        with self._session.get(
+            url=target,
+        ) as result:
+            match result.status_code:
                 case 200:
-                    return str(result.content)
+                    return result.text
                 case _:
                     return None  # TODO: Elaborate on this later...
 
@@ -38,11 +40,11 @@ class Session(Generic[UserT]):
             text, "lxml"
         )  # TODO: Implement custom soup for standardized parsing methods, soon... | Half-done? I still have to elaborate on it.
 
-    async def fetch_page(
+    def fetch_page(
         self,
         target: str,
     ) -> BeautifulSoup:  # TODO: This implementation is delayed until the custom `BeautifulSoup` is implemented.
-        result = await self._fetch_raw_data(target=target)
+        result = self._fetch_raw_data(target=target)
         if result:
             return self._soupify(text=result)
 
@@ -75,29 +77,26 @@ class UserSession(Session):
     ) -> str:  # Returns ´str`, perhaps? Consider if we'd like a custom `Token` object.
         return self._token
 
-    async def login(
+    def login(
         self,
     ) -> bool:
-        async with self._session.post(
-            url="/users/login",
+        with self._session.post(
+            url="https://archiveofourown.org/users/login",
             data={
                 "user[login]": self._username,
                 "user[password]": self._password,
             },
         ) as result:
-            match result.status:
+            match result.status_code:
                 case 200:
-                    text = self._soupify(await result.text())
-                    self._token = text.fetch_token()
+                    self._token = self._soupify(result.text).fetch_token()
                     self._session.headers.update(
                         {
                             "x-requested-with": "XMLHttpRequest",
                             "x-csrf-token": self._token,
                         }
                     )
-
-                    return True
                 case _:
                     return False  # TODO: Implement an exception for this... :)
 
-    async def refresh_token(self) -> None: ...
+    def refresh_token(self) -> None: ...
