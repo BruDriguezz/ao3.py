@@ -1,4 +1,4 @@
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup
 
 
 class AO3Soup(BeautifulSoup):
