@@ -2,8 +2,8 @@ from typing import Generic, TypeVar
 
 from requests import Session as ClientSession
 from bs4 import BeautifulSoup
-
 from ao3._parser import AO3Soup
+from ao3.models.users import User
 
 UserT = TypeVar(name="UserT")  # Veeeery temporary. To be substituted by `User`!
 
@@ -17,38 +17,36 @@ class Session(Generic[UserT]):
             {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
             }
-        )  # TODO: This will become a centralized requester API soon-ish.
-
-    def _fetch_raw_data(
-        self,
-        target: str,
-    ) -> str | None:
-        with self._session.get(
-            url=target,
-        ) as result:
-            match result.status_code:
-                case 200:
-                    return result.text
-                case _:
-                    return None  # TODO: Elaborate on this later...
+        )
 
     def _soupify(
         self,
         text: str,
     ) -> BeautifulSoup:
-        return AO3Soup(
-            text, "lxml"
-        )  # TODO: Implement custom soup for standardized parsing methods, soon... | Half-done? I still have to elaborate on it.
+        return AO3Soup(text, "lxml")
 
     def fetch_page(
         self,
         target: str,
-    ) -> BeautifulSoup:  # TODO: This implementation is delayed until the custom `BeautifulSoup` is implemented.
-        result = self._fetch_raw_data(target=target)
-        if result:
-            return self._soupify(text=result)
+    ) -> BeautifulSoup:
+        with self._session.get(target) as result:
+            return self._soupify(result.text)
 
-        # TODO: Consider if I'd like to implement an exception for this...
+    def post_to_page(
+        self,
+        target: str,
+        data: dict,
+    ) -> ...:
+        with self._session.post(
+            url=target,
+            data=data,
+        ) as result:
+            return self._soupify(result.text)
+
+    def __del__(
+        self,
+    ) -> None:
+        self._session.close()
 
 
 # TODO: Elaborate on this class later; it will require some careful thinking regarding how to manage user operations.
@@ -74,7 +72,7 @@ class UserSession(Session):
     @property
     def token(
         self,
-    ) -> str:  # Returns ´str`, perhaps? Consider if we'd like a custom `Token` object.
+    ) -> str:
         return self._token
 
     def login(
@@ -96,7 +94,19 @@ class UserSession(Session):
                             "x-csrf-token": self._token,
                         }
                     )
+                    self._user = User(self._username, self, is_authenticated=True)
                 case _:
-                    return False  # TODO: Implement an exception for this... :)
+                    return False  # TODO: Implement an exception for this...
 
-    def refresh_token(self) -> None: ...
+    def refresh_token(self) -> None:
+        if self._token:
+            result = self.fetch_page(
+                "https://archiveofourown.org/users/{self._username}/"
+            )
+            self._token = result.fetch_token()
+            self._session.headers.update(
+                {
+                    "x-requested-with": "XMLHttpRequest",
+                    "x-csrf-token": self._token,
+                }
+            )
